@@ -47,7 +47,9 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SpringLayout;
 import javax.swing.border.BevelBorder;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.SoftBevelBorder;
 import javax.swing.text.JTextComponent;
 
@@ -121,6 +123,8 @@ public class MainFrame extends JFrame implements ChangeListener {
 
     private void initGUI()
     {
+        setIconImage(Toolkit.getDefaultToolkit().getImage(
+                MainFrame.class.getResource("/com/sun/javafx/scene/web/skin/Undo_16x16_JFX.png")));
         setTitle("Password Generator");
         final JFrame mainFrame = this;
         getContentPane().setLayout(new BorderLayout(0, 0));
@@ -159,16 +163,17 @@ public class MainFrame extends JFrame implements ChangeListener {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JPanel outerPanel = new JPanel();
-        FlowLayout flowLayout = (FlowLayout) outerPanel.getLayout();
-        flowLayout.setVgap(8);
-        flowLayout.setHgap(8);
-        outerPanel.setBackground(Color.ORANGE);
+        outerPanel.setPreferredSize(new Dimension(800, 400));
         getContentPane().add(outerPanel, BorderLayout.CENTER);
-        outerPanel.setLayout(new BorderLayout(0, 0));
+        SpringLayout sl_outerPanel = new SpringLayout();
+        outerPanel.setLayout(sl_outerPanel);
 
         JPanel innerPanel = new JPanel();
-        innerPanel.setBackground(Color.BLUE);
-        outerPanel.add(innerPanel, BorderLayout.CENTER);
+        sl_outerPanel.putConstraint(SpringLayout.NORTH, innerPanel, 8, SpringLayout.NORTH, outerPanel);
+        sl_outerPanel.putConstraint(SpringLayout.WEST, innerPanel, 8, SpringLayout.WEST, outerPanel);
+        sl_outerPanel.putConstraint(SpringLayout.SOUTH, innerPanel, -8, SpringLayout.SOUTH, outerPanel);
+        sl_outerPanel.putConstraint(SpringLayout.EAST, innerPanel, -8, SpringLayout.EAST, outerPanel);
+        outerPanel.add(innerPanel);
         innerPanel.setLayout(new BorderLayout(0, 0));
 
         JLabel lblMinimumLength = new JLabel("Minimum length:");
@@ -227,8 +232,9 @@ public class MainFrame extends JFrame implements ChangeListener {
         buttonPanel.add(btnCopy);
         buttonPanel.add(btnQuit);
         JPanel textPanel = new JPanel();
+        textPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
         innerPanel.add(textPanel, BorderLayout.CENTER);
-        textPanel.setLayout(new BorderLayout(2, 2));
+        textPanel.setLayout(new BorderLayout(8, 8));
         textPanel.add(_textArea, BorderLayout.CENTER);
 
         _textArea.setLineWrap(true);
@@ -432,5 +438,4 @@ public class MainFrame extends JFrame implements ChangeListener {
             _mf.setText(_mf.getPassword());
         }
     }
-
 }
