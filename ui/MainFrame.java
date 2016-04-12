@@ -18,10 +18,14 @@
 package ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.SystemColor;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -29,8 +33,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -48,9 +56,16 @@ import core.DataModel;
 import core.DataModel.ChangeListener;
 import core.Generator;
 import core.Generator.CharSetType;
-import java.awt.Color;
 
 public class MainFrame extends JFrame implements ChangeListener {
+
+    public static void main(String[] args)
+    {
+        EventQueue.invokeLater(() -> {
+            JFrame frame = new MainFrame();
+            frame.setVisible(true);
+        });
+    }
 
     public MainFrame()
     {
@@ -61,32 +76,47 @@ public class MainFrame extends JFrame implements ChangeListener {
         initGUI();
     }
 
+    /**
+     * @param d
+     * @param whatChanged
+     */
     @Override
-    public void dataChanged(DataModel d, ChangeListener.Item whatChanged)
+    public void dataChanged(DataModel d, ChangeListener.Item whatChanged, Object source)
     {
         switch (whatChanged)
         {
         case CHARACTER_SET:
             break;
         case MAX_LENGTH:
-            maxLengthTextField.setText(Integer.toString(d.getMaxLength()));
+            _maxLengthTextField.setText(Integer.toString(d.getMaxLength()));
             // Ensure that minimum length is <= maximum length
             if (_data.getMinLength() > d.getMaxLength())
             {
-                _data.setMinLength(d.getMaxLength());
+                _data.setMinLength(d.getMaxLength(), source);
             }
+            setDefaultColor(source);
+            setMessage(null);
             break;
         case MIN_LENGTH:
-            minLengthTextField.setText(Integer.toString(d.getMinLength()));
+            _minLengthTextField.setText(Integer.toString(d.getMinLength()));
             // Ensure that minimum length is <= maximum length
             if (_data.getMaxLength() < d.getMinLength())
             {
-                _data.setMaxLength(d.getMinLength());
+                _data.setMaxLength(d.getMinLength(), source);
             }
+            setDefaultColor(source);
+            setMessage(null);
             break;
         default:
             break;
         }
+    }
+
+    @Override
+    public void exceptionOccurred(Exception ex, Object source)
+    {
+        setMessage(ex.getMessage());
+        setErrorColor(source);
     }
 
     private void initGUI()
@@ -95,128 +125,140 @@ public class MainFrame extends JFrame implements ChangeListener {
         final JFrame mainFrame = this;
         getContentPane().setLayout(new BorderLayout(0, 0));
 
-        checkBoxes.add(chckbxUpper);
-        checkBoxes.add(chckbxLower);
-        checkBoxes.add(chckbxDigit);
-        checkBoxes.add(chckbxPunctuation);
-        checkBoxes.add(chckbxSpecial);
-        ActionListener l = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e)
+        JPanel checkBoxPanel = new JPanel();
+        checkBoxPanel.setLayout(new BoxLayout(checkBoxPanel, BoxLayout.Y_AXIS));
+        JButton btnNew = new JButton("New");
+        ActionListener l = new CheckboxActionListener(_data, btnNew);
+        List<CharSetCheckBox> checkBoxes = new ArrayList<>();
+
+        for (CharSetType v : CharSetType.values())
+        {
+            final String label = v.toString().toLowerCase();
+            final CharSetCheckBox cb = new CharSetCheckBox(label, v);
+            final boolean sel = getCheckBoxSelectionFromPrefs(label);
+            if (sel)
             {
-                if (e.getSource() instanceof CharSetCheckBox)
-                {
-                    CharSetCheckBox cb = (CharSetCheckBox) e.getSource();
-                    if (cb.isSelected())
-                    {
-                        _data.addCharSet(cb.getCharSet());
-                    }
-                    else
-                    {
-                        _data.removeCharSet(cb.getCharSet());
-                    }
-                }
+                _data.addCharSet(v);
             }
-        };
+            else
+            {
+                _data.removeCharSet(v);
+            }
+            cb.setSelected(sel);
+            checkBoxes.add(cb);
+        }
+
         checkBoxes.forEach((cb) -> {
-            cb.setSelected(true);
             cb.addActionListener(l);
+            l.actionPerformed(new ActionEvent(cb, ActionEvent.ACTION_PERFORMED, ""));
             checkBoxPanel.add(cb);
         });
 
-        _data.setCharSet(CharSetType.values());
+        updateControlSensitivities();
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        JPanel outerPanel = new JPanel();
         FlowLayout flowLayout = (FlowLayout) outerPanel.getLayout();
         flowLayout.setVgap(8);
         flowLayout.setHgap(8);
         outerPanel.setBackground(Color.ORANGE);
         getContentPane().add(outerPanel, BorderLayout.CENTER);
         outerPanel.setLayout(new BorderLayout(0, 0));
+
+        JPanel innerPanel = new JPanel();
         innerPanel.setBackground(Color.BLUE);
         outerPanel.add(innerPanel, BorderLayout.CENTER);
         innerPanel.setLayout(new BorderLayout(0, 0));
-        textArea.setEditable(false);
-        textArea.setBorder(new SoftBevelBorder(BevelBorder.LOWERED, null, null, null, null));
-        textArea.setFont(new Font("Lucida Sans Typewriter", Font.PLAIN, 14));
-        textArea.setPreferredSize(new Dimension(320, 120));
-        innerPanel.add(textArea, BorderLayout.CENTER);
-        innerPanel.add(topPanel, BorderLayout.NORTH);
-        lblMinimumLength.setLabelFor(minLengthTextField);
-        maxLengthTextField.setColumns(10);
-        maxLengthTextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusLost(FocusEvent e)
-            {
-                _data.setMaxLength(Integer.valueOf(maxLengthTextField.getText()));
-            }
-        });
-        minLengthTextField.setColumns(10);
-        minLengthTextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusLost(FocusEvent e)
-            {
-                _data.setMinLength(Integer.valueOf(minLengthTextField.getText()));
-            }
-        });
+
+        JLabel lblMinimumLength = new JLabel("Minimum length:");
+        lblMinimumLength.setLabelFor(_minLengthTextField);
+
+        JLabel lblMaximumLength = new JLabel("Maximum length:");
+        lblMaximumLength.setLabelFor(_maxLengthTextField);
+
+        final KeyListener kl = new DecimalDigitsOnly();
+
+        _maxLengthTextField.setColumns(10);
+        _maxLengthTextField.addKeyListener(kl);
+        _maxLengthTextField.addFocusListener(new SelectAllOnFocus());
+        _maxLengthTextField.addFocusListener(
+                new FocusLost(tf -> _data.setMaxLength(Integer.valueOf(tf.getText()), tf)));
+
+        _minLengthTextField.setColumns(10);
+        _minLengthTextField.addKeyListener(kl);
+        _minLengthTextField.addFocusListener(new SelectAllOnFocus());
+        _minLengthTextField.addFocusListener(
+                new FocusLost(tf -> _data.setMinLength(Integer.valueOf(tf.getText()), tf)));
+
+        JPanel topPanel = new JPanel();
         topPanel.setLayout(new MigLayout("", "[77px][86px][81px][86px]", "[33px][33px][33px]"));
         topPanel.add(lblMinimumLength, "cell 0 0,alignx left,aligny center");
-        topPanel.add(minLengthTextField, "cell 1 0,alignx center,aligny center");
+        topPanel.add(_minLengthTextField, "cell 1 0,alignx center,aligny center");
         topPanel.add(lblMaximumLength, "cell 0 1,alignx left,aligny center");
-        topPanel.add(maxLengthTextField, "cell 1 1,alignx center,aligny center");
-        lblMaximumLength.setLabelFor(maxLengthTextField);
+        topPanel.add(_maxLengthTextField, "cell 1 1,alignx center,aligny center");
 
         topPanel.add(checkBoxPanel, "cell 0 2 4 1,alignx left,aligny center");
-        checkBoxPanel.setLayout(new BoxLayout(checkBoxPanel, BoxLayout.Y_AXIS));
+        innerPanel.add(topPanel, BorderLayout.NORTH);
 
-        innerPanel.add(buttonPanel, BorderLayout.SOUTH);
+        JPanel buttonPanel = new JPanel();
         buttonPanel.setPreferredSize(new Dimension(10, 32));
         buttonPanel.setMinimumSize(new Dimension(10, 32));
         buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+        innerPanel.add(buttonPanel, BorderLayout.SOUTH);
 
+        btnNew.setMnemonic('n');
+        btnNew.addActionListener(new NewActionListener(this));
+
+        JButton btnCopy = new JButton("Copy");
         btnCopy.setMnemonic('c');
         btnCopy.addActionListener((e) -> {
-            System.out.println(textArea.getSelectedText());
-            String password = textArea.getSelectedText();
+            String password = _textArea.getSelectedText();
             StringSelection selec = new StringSelection(password);
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents(selec, selec);
         });
-        
-        btnNew.setMnemonic('n');
-        btnNew.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e)
-            {
-                final String pw = getPassword();
-                EventQueue.invokeLater(() -> {
-                    textArea.setText(pw);
-                    textArea.setCaretPosition(0);
-                    textArea.moveCaretPosition(pw.length());
-                    textArea.getCaret().setSelectionVisible(true);
-                });
-            }
-        });
-        
+
+        JButton btnQuit = new JButton("Quit");
         btnQuit.setMnemonic('q');
-        btnQuit.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e)
-            {
-                mainFrame.dispose();
-            }
-        });
-        
+        btnQuit.addActionListener(new QuitActionListener(mainFrame));
+
         buttonPanel.add(btnNew);
         buttonPanel.add(btnCopy);
         buttonPanel.add(btnQuit);
+        JPanel textPanel = new JPanel();
+        innerPanel.add(textPanel, BorderLayout.CENTER);
+        textPanel.setLayout(new BorderLayout(2, 2));
+        textPanel.add(_textArea, BorderLayout.CENTER);
+
+        _textArea.setLineWrap(true);
+        _textArea.setEditable(false);
+        _textArea.setBorder(new SoftBevelBorder(BevelBorder.LOWERED, null, null, null, null));
+        _textArea.setFont(new Font("Lucida Sans Typewriter", Font.PLAIN, 14));
+        _textArea.setPreferredSize(new Dimension(320, 120));
+
+        _messageArea.setBackground(SystemColor.control);
+        _messageArea.setBorder(null);
+        textPanel.add(_messageArea, BorderLayout.SOUTH);
 
         pack();
+    }
+
+    private void updateControlSensitivities()
+    {
+        // (_data.getCharSet().length > 0);
+    }
+
+    private boolean getCheckBoxSelectionFromPrefs(String lowerCase)
+    {
+        return false;
     }
 
     private String getPassword()
     {
         final String characterSet = getCharacterSet();
-        int minLength = valueOf(minLengthTextField);
-        int maxLength = valueOf(maxLengthTextField);
+        int minLength = valueOf(_minLengthTextField);
+        int maxLength = valueOf(_maxLengthTextField);
         return _pwGen.createPassword(characterSet, minLength, maxLength);
     }
 
@@ -231,36 +273,164 @@ public class MainFrame extends JFrame implements ChangeListener {
         return _pwGen.getCharacterSet(cs);
     }
 
-    private DataModel _data;
-    private Generator _pwGen;
-    private final JButton btnNew = new JButton("New");
-    private final JButton btnCopy = new JButton("Copy");
-    private final JButton btnQuit = new JButton("Quit");
-    private final JTextArea textArea = new JTextArea();
-    private final JPanel outerPanel = new JPanel();
-    private final JPanel innerPanel = new JPanel();
-    private final JPanel topPanel = new JPanel();
-    private final JPanel buttonPanel = new JPanel();
-    private final JTextField minLengthTextField = new JTextField("8");
-    private final JTextField maxLengthTextField = new JTextField("8");
-    private final JLabel lblMinimumLength = new JLabel("Minimum length:");
-    private final JLabel lblMaximumLength = new JLabel("Maximum length:");
-    private final CharSetCheckBox chckbxUpper = new CharSetCheckBox("upper", CharSetType.UPPER);
-    private final CharSetCheckBox chckbxLower = new CharSetCheckBox("lower", CharSetType.LOWER);
-    private final CharSetCheckBox chckbxDigit = new CharSetCheckBox("digit", CharSetType.DIGIT);
-    private final CharSetCheckBox chckbxPunctuation = new CharSetCheckBox("punctuation", CharSetType.PUNCTUATION);
-    private final CharSetCheckBox chckbxSpecial = new CharSetCheckBox("special", CharSetType.SPECIAL);
-    private final List<CharSetCheckBox> checkBoxes = new ArrayList<>();
-    private final JPanel checkBoxPanel = new JPanel();
-
-    public static void main(String[] args)
+    private void setText(String text)
     {
-        EventQueue.invokeLater(() -> {
-            JFrame frame = new MainFrame();
-            frame.setVisible(true);
-        });
+        _textArea.setText(text);
+        _textArea.setCaretPosition(0);
+        _textArea.moveCaretPosition(text.length());
+        _textArea.getCaret().setSelectionVisible(true);
     }
 
+    private void setMessage(String message)
+    {
+        _messageArea.setText(message);
+    }
+
+    private void setDefaultColor(Object source)
+    {
+        if (source instanceof JTextField)
+        {
+            ((JTextField) source).setBackground(_defaultColor);
+        }
+    }
+
+    private void setErrorColor(Object source)
+    {
+        if (source instanceof Container)
+        {
+            ((Container) source).setBackground(Color.RED);
+        }
+    }
+
+    private DataModel _data;
+    private Generator _pwGen;
+    private final JTextArea _textArea = new JTextArea();
+    private final JTextArea _messageArea = new JTextArea();
+    private final JTextField _minLengthTextField = new JTextField("8");
+    private final JTextField _maxLengthTextField = new JTextField("8");
+    private final Color _defaultColor = _minLengthTextField.getBackground();
+
     private static final long serialVersionUID = 1L;
+
+    private static final class DecimalDigitsOnly extends KeyAdapter {
+        @Override
+        public void keyTyped(KeyEvent e)
+        {
+            char c = e.getKeyChar();
+            boolean isDigit = (c >= '0' && c <= '9');
+            if (!isDigit)
+            {
+                e.consume();
+            }
+        }
+
+    }
+
+    private static final class SelectAllOnFocus extends FocusAdapter {
+        @Override
+        public void focusGained(FocusEvent e)
+        {
+            if (e.getID() == FocusEvent.FOCUS_GAINED)
+            {
+                Component component = e.getComponent();
+                if (component instanceof JTextField)
+                {
+                    ((JTextField) component).selectAll();
+                }
+            }
+        }
+    }
+
+    /**
+     * Perform an action when a JTextField loses focus. *
+     */
+    private static final class FocusLost extends FocusAdapter {
+        public FocusLost(Consumer<JTextField> c)
+        {
+            _c = c;
+        }
+
+        @Override
+        public void focusLost(FocusEvent e)
+        {
+            if (e.getID() == FocusEvent.FOCUS_LOST)
+            {
+                Component component = e.getComponent();
+                if (component instanceof JTextField)
+                {
+                    try
+                    {
+                        _c.accept((JTextField) component);
+                    }
+                    catch (Exception ex)
+                    {
+                        ;
+                    }
+                }
+            }
+        }
+
+        private Consumer<JTextField> _c;
+    }
+
+    /**
+     * Update data model according to checkbox selections. *
+     */
+    private static final class CheckboxActionListener implements ActionListener {
+        DataModel _data;
+        private JButton _applyButton;
+
+        public CheckboxActionListener(DataModel data, JButton applyButton)
+        {
+            _data = data;
+            _applyButton = applyButton;
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e)
+        {
+            if (e.getSource() instanceof CharSetCheckBox)
+            {
+                CharSetCheckBox cb = (CharSetCheckBox) e.getSource();
+                if (cb.isSelected())
+                {
+                    _data.addCharSet(cb.getCharSet());
+                }
+                else
+                {
+                    _data.removeCharSet(cb.getCharSet());
+                }
+                _applyButton.setEnabled(_data.getCharSet().length > 0);
+            }
+        }
+    }
+
+    private static final class QuitActionListener implements ActionListener {
+        private final JFrame _mf;
+
+        private QuitActionListener(JFrame mainFrame)
+        {
+            _mf = mainFrame;
+        }
+
+        public void actionPerformed(ActionEvent e)
+        {
+            _mf.dispose();
+        }
+    }
+
+    private static final class NewActionListener implements ActionListener {
+        private MainFrame _mf;
+
+        NewActionListener(MainFrame mf)
+        {
+            _mf = mf;
+        }
+
+        public void actionPerformed(ActionEvent e)
+        {
+            _mf.setText(_mf.getPassword());
+        }
+    }
 
 }

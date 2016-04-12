@@ -31,7 +31,8 @@ public class DataModel {
             MIN_LENGTH, MAX_LENGTH, CHARACTER_SET
         };
 
-        void dataChanged(DataModel d, Item whatChanged);
+        void dataChanged(DataModel d, Item whatChanged, Object source);
+        void exceptionOccurred(Exception ex, Object source);
     }
 
     public int getMinLength()
@@ -39,12 +40,20 @@ public class DataModel {
         return minLength;
     }
 
-    public void setMinLength(int value)
+    public void setMinLength(int value, Object source)
     {
-        if (value != minLength)
+        try
         {
-            minLength = value;
-            notifyListeners(ChangeListener.Item.MIN_LENGTH);
+            checkValue(value);
+            if (value != minLength)
+            {
+                minLength = value;
+                notifyListeners(ChangeListener.Item.MIN_LENGTH, source);
+            }
+        }
+        catch (Exception ex)
+        {
+            notifyException(ex, source);
         }
     }
 
@@ -53,12 +62,20 @@ public class DataModel {
         return maxLength;
     }
 
-    public void setMaxLength(int value)
+    public void setMaxLength(int value, Object source)
     {
-        if (value != maxLength)
+        try
         {
-            maxLength = value;
-            notifyListeners(ChangeListener.Item.MAX_LENGTH);
+            checkValue(value);
+            if (value != maxLength)
+            {
+                maxLength = value;
+                notifyListeners(ChangeListener.Item.MAX_LENGTH, source);
+            }
+        }
+        catch (Exception ex)
+        {
+            notifyException(ex, source);
         }
     }
 
@@ -102,7 +119,7 @@ public class DataModel {
         if (changed)
         {
             charSet = temp;
-            notifyListeners(ChangeListener.Item.CHARACTER_SET);
+            notifyListeners(ChangeListener.Item.CHARACTER_SET, null);
         }
     }
 
@@ -110,7 +127,7 @@ public class DataModel {
     {
         if (charSet.add(cs))
         {
-            notifyListeners(ChangeListener.Item.CHARACTER_SET);
+            notifyListeners(ChangeListener.Item.CHARACTER_SET, null);
         }
     }
 
@@ -118,7 +135,7 @@ public class DataModel {
     {
         if (charSet.remove(cs))
         {
-            notifyListeners(ChangeListener.Item.CHARACTER_SET);
+            notifyListeners(ChangeListener.Item.CHARACTER_SET, null);
         }
     }
 
@@ -139,9 +156,22 @@ public class DataModel {
         return result;
     }
 
-    private void notifyListeners(ChangeListener.Item what)
+    private void notifyListeners(ChangeListener.Item what, Object source)
     {
-        _listeners.forEach((l) -> l.dataChanged(this, what));
+        _listeners.forEach(l -> l.dataChanged(this, what, source));
+    }
+
+    private void notifyException(Exception ex, Object source)
+    {
+        _listeners.forEach(l -> l.exceptionOccurred(ex, source));
+    }
+
+    private void checkValue(int value) throws Exception
+    {
+        if (value < 0)
+        {
+            throw new Exception("Value must be positive");
+        }
     }
 
     private int minLength;
