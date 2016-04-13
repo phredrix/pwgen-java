@@ -17,6 +17,17 @@
 
 package core;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.ObjectStreamException;
+import java.io.OutputStream;
+import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -24,7 +35,7 @@ import java.util.TreeSet;
 
 import core.Generator.CharSetType;
 
-public class DataModel {
+public class DataModel implements Serializable {
 
     public interface ChangeListener {
         enum Item {
@@ -32,7 +43,45 @@ public class DataModel {
         };
 
         void dataChanged(DataModel d, Item whatChanged, Object source);
+
         void exceptionOccurred(Exception ex, Object source);
+    }
+
+    private DataModel()
+    {
+    }
+
+    public static DataModel create()
+    {
+        return new DataModel();
+    }
+
+    public void saveDataModel(String fileName) throws IOException
+    {
+        try (OutputStream os = new FileOutputStream(fileName);
+                ObjectOutputStream oos = new ObjectOutputStream(os))
+        {
+            oos.writeObject(this);
+        }
+    }
+
+    public static DataModel loadDataModel(String fileName) throws ClassNotFoundException, IOException
+    {
+        DataModel result = null;
+        if (Files.exists(Paths.get(fileName)))
+        {
+            try (InputStream is = new FileInputStream(fileName);
+                    ObjectInputStream ois = new ObjectInputStream(is))
+            {
+                Object o = ois.readObject();
+                if (o instanceof DataModel)
+                {
+                    result = (DataModel) o;
+                }
+            }
+        }
+
+        return result;
     }
 
     public int getMinLength()
@@ -174,9 +223,86 @@ public class DataModel {
         }
     }
 
-    private int minLength;
-    private int maxLength;
+    /**
+     * The writeObject method is responsible for writing the state of the object
+     * for its particular class so that the corresponding readObject method can
+     * restore it. The default mechanism for saving the Object's fields can be
+     * invoked by calling out.defaultWriteObject. The method does not need to
+     * concern itself with the state belonging to its superclasses or
+     * subclasses. State is saved by writing the individual fields to the
+     * ObjectOutputStream using the writeObject method or by using the methods
+     * for primitive data types supported by DataOutput.
+     * 
+     * @param out
+     * @throws IOException
+     */
+    private void writeObject(java.io.ObjectOutputStream out)
+            throws IOException
+    {
+        out.writeInt(minLength);
+        out.writeInt(maxLength);
+        out.writeObject(charSet);
+        out.writeInt(charSet.size());
+    }
+
+    /**
+     * The readObject method is responsible for reading from the stream and
+     * restoring the classes fields. It may call in.defaultReadObject to invoke
+     * the default mechanism for restoring the object's non-static and
+     * non-transient fields. The defaultReadObject method uses information in
+     * the stream to assign the fields of the object saved in the stream with
+     * the correspondingly named fields in the current object. This handles the
+     * case when the class has evolved to add new fields. The method does not
+     * need to concern itself with the state belonging to its superclasses or
+     * subclasses. State is saved by writing the individual fields to the
+     * ObjectOutputStream using the writeObject method or by using the methods
+     * for primitive data types supported by DataOutput.
+     * 
+     * @param in
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    @SuppressWarnings("unchecked")
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException
+    {
+        _listeners = new ArrayList<>();
+
+        minLength = in.readInt();
+        maxLength = in.readInt();
+        final Object o = in.readObject();
+        charSet = (Set<CharSetType>) o;
+        int charSetSize = in.readInt();
+        if (charSet.size() != charSetSize)
+        {
+            throw new IOException("Incorrect collection size: charSet");
+        }
+    }
+
+    /**
+     * The readObjectNoData method is responsible for initializing the state of
+     * the object for its particular class in the event that the serialization
+     * stream does not list the given class as a superclass of the object being
+     * deserialized. This may occur in cases where the receiving party uses a
+     * different version of the deserialized instance's class than the sending
+     * party, and the receiver's version extends classes that are not extended
+     * by the sender's version. This may also occur if the serialization stream
+     * has been tampered; hence, readObjectNoData is useful for initializing
+     * deserialized objects properly despite a "hostile" or incomplete source
+     * stream.
+     * 
+     * @throws ObjectStreamException
+     */
+    @SuppressWarnings("unused")
+    private void readObjectNoData()
+            throws ObjectStreamException
+    {
+    }
+
+    private int minLength = 8;
+    private int maxLength = 8;
     private Set<CharSetType> charSet = new TreeSet<>();
 
     List<ChangeListener> _listeners = new ArrayList<>();
+    private static final long serialVersionUID = -3967729926712058588L;
 }

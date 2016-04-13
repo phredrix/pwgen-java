@@ -25,6 +25,8 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Frame;
+import java.awt.Point;
 import java.awt.SystemColor;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -36,8 +38,26 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import javax.swing.BoxLayout;
@@ -71,11 +91,83 @@ public class MainFrame extends JFrame implements ChangeListener {
 
     public MainFrame()
     {
-        getContentPane().setBackground(Color.PINK);
-        _data = new DataModel();
+        try
+        {
+            _data = DataModel.loadDataModel(dataPersistenceFile());
+        }
+        catch (ClassNotFoundException | IOException e)
+        {
+            e.printStackTrace();
+        }
+
+        if (_data == null)
+        {
+            _data = DataModel.create();
+        }
+
+        for (Item t : Item.values())
+        {
+            dataChanged(_data, t, null);
+        }
+
         _data.addListener(this);
         _pwGen = new Generator();
+
         initGUI();
+
+        loadUiData(uiPersistenceFile());
+
+        final WindowAdapter l = new WindowAdapter() {
+            @Override
+            public void windowIconified(WindowEvent e)
+            {
+                System.out.println("windowIconified()");
+                System.out.println(e);
+            }
+
+            @Override
+            public void windowDeiconified(WindowEvent e)
+            {
+                System.out.println("windowDeiconified()");
+                System.out.println(e);
+                System.out.println(e.getWindow().getSize());
+            }
+
+            @Override
+            public void windowStateChanged(WindowEvent e)
+            {
+                System.out.println("windowStateChanged()");
+                System.out.println(e);
+                if (e.getNewState() == Frame.NORMAL) {
+                    System.out.println(e.getWindow().getSize());
+                }
+            }
+
+            @Override
+            public void windowOpened(WindowEvent e)
+            {
+                System.out.println("windowOpened()");
+                System.out.println(e);
+                System.out.println(e.getWindow().getSize());
+            }
+
+            @Override
+            public void windowClosing(WindowEvent e)
+            {
+                System.out.println("windowClosing()");
+                System.out.println(e);
+                saveState();
+            }
+
+            @Override
+            public void windowClosed(WindowEvent e)
+            {
+                System.out.println("windowClosed()");
+                System.out.println(e);
+            }
+        };
+        addWindowStateListener(l);
+        addWindowListener(l);
     }
 
     /**
@@ -85,6 +177,8 @@ public class MainFrame extends JFrame implements ChangeListener {
     @Override
     public void dataChanged(DataModel d, ChangeListener.Item whatChanged, Object source)
     {
+        if (source == this) return;
+
         switch (whatChanged)
         {
         case CHARACTER_SET:
@@ -121,6 +215,9 @@ public class MainFrame extends JFrame implements ChangeListener {
         setErrorColor(source);
     }
 
+    /**
+     * NB: _data must be initialized before calling initGUI()
+     */
     private void initGUI()
     {
         setIconImage(Toolkit.getDefaultToolkit().getImage(
@@ -133,26 +230,24 @@ public class MainFrame extends JFrame implements ChangeListener {
         checkBoxPanel.setLayout(new BoxLayout(checkBoxPanel, BoxLayout.Y_AXIS));
         JButton btnNew = new JButton("New");
         ActionListener l = new CheckboxActionListener(_data, btnNew);
-        List<CharSetCheckBox> checkBoxes = new ArrayList<>();
+
+        final CharSetType[] charSets = _data.getCharSet();
+        HashMap<CharSetType, Boolean> charSetMap = new HashMap<>();
+        for (CharSetType t : charSets)
+        {
+            charSetMap.put(t, true);
+        }
 
         for (CharSetType v : CharSetType.values())
         {
             final String label = v.toString().toLowerCase();
             final CharSetCheckBox cb = new CharSetCheckBox(label, v);
-            final boolean sel = getCheckBoxSelectionFromPrefs(label);
-            if (sel)
-            {
-                _data.addCharSet(v);
-            }
-            else
-            {
-                _data.removeCharSet(v);
-            }
+            final boolean sel = charSetMap.get(v) != null;
             cb.setSelected(sel);
-            checkBoxes.add(cb);
+            _checkBoxes.add(cb);
         }
 
-        checkBoxes.forEach((cb) -> {
+        _checkBoxes.forEach((cb) -> {
             cb.addActionListener(l);
             l.actionPerformed(new ActionEvent(cb, ActionEvent.ACTION_PERFORMED, ""));
             checkBoxPanel.add(cb);
@@ -160,7 +255,7 @@ public class MainFrame extends JFrame implements ChangeListener {
 
         updateControlSensitivities();
 
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         JPanel outerPanel = new JPanel();
         outerPanel.setPreferredSize(new Dimension(800, 400));
@@ -255,11 +350,6 @@ public class MainFrame extends JFrame implements ChangeListener {
         // (_data.getCharSet().length > 0);
     }
 
-    private boolean getCheckBoxSelectionFromPrefs(String lowerCase)
-    {
-        return false;
-    }
-
     private String getPassword()
     {
         final String characterSet = getCharacterSet();
@@ -308,13 +398,134 @@ public class MainFrame extends JFrame implements ChangeListener {
         }
     }
 
+    private void saveState()
+    {
+        try
+        {
+            _data.saveDataModel(dataPersistenceFile());
+            saveUiData(uiPersistenceFile());
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveUiData(String uiPersistenceFile)
+    {
+        int frameState = getExtendedState();
+        if ((frameState | Frame.MAXIMIZED_BOTH) != 0)
+        {
+            this.setExtendedState(Frame.NORMAL);
+        }
+        try (OutputStream out = new FileOutputStream(uiPersistenceFile);
+                ObjectOutputStream oos = new ObjectOutputStream(out))
+        {
+            oos.writeLong(serialVersionUID);
+            oos.writeObject(getSize());
+            oos.writeObject(getLocation());
+        }
+        catch (FileNotFoundException e)
+        {
+            e.printStackTrace();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadUiData(String uiPersistenceFile)
+    {
+        if (Files.exists(Paths.get(uiPersistenceFile)))
+        {
+            try (InputStream is = new FileInputStream(uiPersistenceFile);
+                    ObjectInputStream ois = new ObjectInputStream(is))
+            {
+                if (ois.readLong() == serialVersionUID)
+                {
+                    Dimension size = (Dimension) ois.readObject();
+                    setSize(size);
+                    Point position = (Point) ois.readObject();
+                    setLocation(position);
+                }
+            }
+            catch (FileNotFoundException e)
+            {
+                e.printStackTrace();
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+            catch (ClassNotFoundException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static String dataPersistenceFile()
+    {
+        return persistenceFile(DataModel.class.getCanonicalName());
+    }
+
+    private static String uiPersistenceFile()
+    {
+        return persistenceFile(MainFrame.class.getCanonicalName());
+    }
+
+    private static String persistenceFile(String className)
+    {
+        if (!_dataPersistenceFile.containsKey(className))
+        {
+            final String tmpdir = System.getProperty("java.io.tmpdir");
+            String fileName = className;
+
+            try
+            {
+                MessageDigest md = MessageDigest.getInstance("SHA");
+                md.update(fileName.getBytes("UTF-8"));
+                byte[] digest = md.digest();
+                fileName = String.format("%032x", new java.math.BigInteger(1, digest));
+            }
+            catch (NoSuchAlgorithmException e1)
+            {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+            catch (UnsupportedEncodingException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+            Path p = Paths.get(tmpdir, "pwgen-java", fileName + ".data");
+            try
+            {
+                Files.createDirectories(p.getParent());
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+            _dataPersistenceFile.put(className, p.toString());
+        }
+
+        return _dataPersistenceFile.get(className);
+    }
+
     private DataModel _data;
     private Generator _pwGen;
+    private final List<CharSetCheckBox> _checkBoxes = new ArrayList<>();
     private final JTextArea _textArea = new JTextArea();
     private final JTextArea _messageArea = new JTextArea();
-    private final JTextField _minLengthTextField = new JTextField("8");
-    private final JTextField _maxLengthTextField = new JTextField("8");
+    private final JTextField _minLengthTextField = new JTextField();
+    private final JTextField _maxLengthTextField = new JTextField();
     private final Color _defaultColor = _minLengthTextField.getBackground();
+
+    private static Map<String, String> _dataPersistenceFile = new HashMap<>();
 
     private static final long serialVersionUID = 1L;
 
@@ -421,7 +632,9 @@ public class MainFrame extends JFrame implements ChangeListener {
 
         public void actionPerformed(ActionEvent e)
         {
-            _mf.dispose();
+            _mf.dispatchEvent(new WindowEvent(_mf, WindowEvent.WINDOW_CLOSING));
+//            _mf.setVisible(false);
+//            _mf.dispose();
         }
     }
 
