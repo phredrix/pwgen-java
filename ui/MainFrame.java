@@ -19,7 +19,6 @@ package ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.EventQueue;
@@ -33,10 +32,6 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -58,7 +53,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -71,9 +65,15 @@ import javax.swing.SpringLayout;
 import javax.swing.border.BevelBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.SoftBevelBorder;
-import javax.swing.text.JTextComponent;
 
 import net.miginfocom.swing.MigLayout;
+import ui.utils.CharSetCheckBox;
+import ui.utils.CheckboxActionListener;
+import ui.utils.DecimalDigitsOnly;
+import ui.utils.FocusLost;
+import ui.utils.NewActionListener;
+import ui.utils.QuitActionListener;
+import ui.utils.SelectAllOnFocus;
 import core.DataModel;
 import core.DataModel.ChangeListener;
 import core.Generator;
@@ -111,7 +111,7 @@ public class MainFrame extends JFrame implements ChangeListener {
         }
 
         _data.addListener(this);
-        _pwGen = new Generator();
+        new Generator();
 
         initGUI();
 
@@ -215,13 +215,22 @@ public class MainFrame extends JFrame implements ChangeListener {
         setErrorColor(source);
     }
 
+    public void setText(String text)
+    {
+        _textArea.setText(text);
+        _textArea.setCaretPosition(0);
+        _textArea.moveCaretPosition(text.length());
+        _textArea.getCaret().setSelectionVisible(true);
+    }
+
     /**
      * NB: _data must be initialized before calling initGUI()
      */
     private void initGUI()
     {
-        setIconImage(Toolkit.getDefaultToolkit().getImage(
-                MainFrame.class.getResource("/com/sun/javafx/scene/web/skin/Undo_16x16_JFX.png")));
+        // TODO: Create a real icon for the app.
+        final String icon = "/com/sun/javafx/scene/web/skin/Undo_16x16_JFX.png";
+        setIconImage(Toolkit.getDefaultToolkit().getImage(MainFrame.class.getResource(icon)));
         setTitle("Password Generator");
         final JFrame mainFrame = this;
         getContentPane().setLayout(new BorderLayout(0, 0));
@@ -253,8 +262,6 @@ public class MainFrame extends JFrame implements ChangeListener {
             checkBoxPanel.add(cb);
         });
 
-        updateControlSensitivities();
-
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         JPanel outerPanel = new JPanel();
@@ -279,12 +286,14 @@ public class MainFrame extends JFrame implements ChangeListener {
 
         final KeyListener kl = new DecimalDigitsOnly();
 
+        _maxLengthTextField.setName("Maximum length");
         _maxLengthTextField.setColumns(10);
         _maxLengthTextField.addKeyListener(kl);
         _maxLengthTextField.addFocusListener(new SelectAllOnFocus());
         _maxLengthTextField.addFocusListener(
                 new FocusLost(tf -> _data.setMaxLength(Integer.valueOf(tf.getText()), tf)));
 
+        _minLengthTextField.setName("Minimum length");
         _minLengthTextField.setColumns(10);
         _minLengthTextField.addKeyListener(kl);
         _minLengthTextField.addFocusListener(new SelectAllOnFocus());
@@ -292,6 +301,7 @@ public class MainFrame extends JFrame implements ChangeListener {
                 new FocusLost(tf -> _data.setMinLength(Integer.valueOf(tf.getText()), tf)));
 
         JPanel topPanel = new JPanel();
+        topPanel.setName("Top panel");
         topPanel.setLayout(new MigLayout("", "[77px][86px][81px][86px]", "[33px][33px][33px]"));
         topPanel.add(lblMinimumLength, "cell 0 0,alignx left,aligny center");
         topPanel.add(_minLengthTextField, "cell 1 0,alignx center,aligny center");
@@ -308,7 +318,7 @@ public class MainFrame extends JFrame implements ChangeListener {
         innerPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         btnNew.setMnemonic('n');
-        btnNew.addActionListener(new NewActionListener(this));
+        btnNew.addActionListener(new NewActionListener(this, _data));
 
         JButton btnCopy = new JButton("Copy");
         btnCopy.setMnemonic('c');
@@ -323,58 +333,31 @@ public class MainFrame extends JFrame implements ChangeListener {
         btnQuit.setMnemonic('q');
         btnQuit.addActionListener(new QuitActionListener(mainFrame));
 
+        buttonPanel.setName("Button panel");
         buttonPanel.add(btnNew);
         buttonPanel.add(btnCopy);
         buttonPanel.add(btnQuit);
+        
         JPanel textPanel = new JPanel();
+        textPanel.setName("Text panel");
         textPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
         innerPanel.add(textPanel, BorderLayout.CENTER);
         textPanel.setLayout(new BorderLayout(8, 8));
-        textPanel.add(_textArea, BorderLayout.CENTER);
 
+        _textArea.setName("Text area");
         _textArea.setLineWrap(true);
         _textArea.setEditable(false);
         _textArea.setBorder(new SoftBevelBorder(BevelBorder.LOWERED, null, null, null, null));
         _textArea.setFont(new Font("Lucida Sans Typewriter", Font.PLAIN, 14));
         _textArea.setPreferredSize(new Dimension(320, 120));
+        textPanel.add(_textArea, BorderLayout.CENTER);
 
+        _messageArea.setName("Message area");
         _messageArea.setBackground(SystemColor.control);
         _messageArea.setBorder(null);
         textPanel.add(_messageArea, BorderLayout.SOUTH);
 
         pack();
-    }
-
-    private void updateControlSensitivities()
-    {
-        // (_data.getCharSet().length > 0);
-    }
-
-    private String getPassword()
-    {
-        final String characterSet = getCharacterSet();
-        int minLength = valueOf(_minLengthTextField);
-        int maxLength = valueOf(_maxLengthTextField);
-        return _pwGen.createPassword(characterSet, minLength, maxLength);
-    }
-
-    private int valueOf(JTextComponent tf)
-    {
-        return Integer.valueOf(tf.getText());
-    }
-
-    private String getCharacterSet()
-    {
-        final CharSetType[] cs = _data.getCharSet();
-        return _pwGen.getCharacterSet(cs);
-    }
-
-    private void setText(String text)
-    {
-        _textArea.setText(text);
-        _textArea.setCaretPosition(0);
-        _textArea.moveCaretPosition(text.length());
-        _textArea.getCaret().setSelectionVisible(true);
     }
 
     private void setMessage(String message)
@@ -514,7 +497,6 @@ public class MainFrame extends JFrame implements ChangeListener {
     }
 
     private DataModel _data;
-    private Generator _pwGen;
     private final List<CharSetCheckBox> _checkBoxes = new ArrayList<>();
     private final JTextArea _textArea = new JTextArea();
     private final JTextArea _messageArea = new JTextArea();
@@ -525,127 +507,4 @@ public class MainFrame extends JFrame implements ChangeListener {
     private static Map<String, String> _dataPersistenceFile = new HashMap<>();
 
     private static final long serialVersionUID = 1L;
-
-    private static final class DecimalDigitsOnly extends KeyAdapter {
-        @Override
-        public void keyTyped(KeyEvent e)
-        {
-            char c = e.getKeyChar();
-            boolean isDigit = (c >= '0' && c <= '9');
-            if (!isDigit)
-            {
-                e.consume();
-            }
-        }
-
-    }
-
-    private static final class SelectAllOnFocus extends FocusAdapter {
-        @Override
-        public void focusGained(FocusEvent e)
-        {
-            if (e.getID() == FocusEvent.FOCUS_GAINED)
-            {
-                Component component = e.getComponent();
-                if (component instanceof JTextField)
-                {
-                    ((JTextField) component).selectAll();
-                }
-            }
-        }
-    }
-
-    /**
-     * Perform an action when a JTextField loses focus. *
-     */
-    private static final class FocusLost extends FocusAdapter {
-        public FocusLost(Consumer<JTextField> c)
-        {
-            _c = c;
-        }
-
-        @Override
-        public void focusLost(FocusEvent e)
-        {
-            if (e.getID() == FocusEvent.FOCUS_LOST)
-            {
-                Component component = e.getComponent();
-                if (component instanceof JTextField)
-                {
-                    try
-                    {
-                        _c.accept((JTextField) component);
-                    }
-                    catch (Exception ex)
-                    {
-                        ;
-                    }
-                }
-            }
-        }
-
-        private Consumer<JTextField> _c;
-    }
-
-    /**
-     * Update data model according to checkbox selections. *
-     */
-    private static final class CheckboxActionListener implements ActionListener {
-        DataModel _data;
-        private JButton _applyButton;
-
-        public CheckboxActionListener(DataModel data, JButton applyButton)
-        {
-            _data = data;
-            _applyButton = applyButton;
-        }
-
-        @Override
-        public void actionPerformed(ActionEvent e)
-        {
-            if (e.getSource() instanceof CharSetCheckBox)
-            {
-                CharSetCheckBox cb = (CharSetCheckBox) e.getSource();
-                if (cb.isSelected())
-                {
-                    _data.addCharSet(cb.getCharSet());
-                }
-                else
-                {
-                    _data.removeCharSet(cb.getCharSet());
-                }
-                _applyButton.setEnabled(_data.getCharSet().length > 0);
-            }
-        }
-    }
-
-    private static final class QuitActionListener implements ActionListener {
-        private final JFrame _mf;
-
-        private QuitActionListener(JFrame mainFrame)
-        {
-            _mf = mainFrame;
-        }
-
-        public void actionPerformed(ActionEvent e)
-        {
-            _mf.dispatchEvent(new WindowEvent(_mf, WindowEvent.WINDOW_CLOSING));
-//            _mf.setVisible(false);
-//            _mf.dispose();
-        }
-    }
-
-    private static final class NewActionListener implements ActionListener {
-        private MainFrame _mf;
-
-        NewActionListener(MainFrame mf)
-        {
-            _mf = mf;
-        }
-
-        public void actionPerformed(ActionEvent e)
-        {
-            _mf.setText(_mf.getPassword());
-        }
-    }
 }
