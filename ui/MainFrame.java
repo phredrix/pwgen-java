@@ -138,7 +138,7 @@ public class MainFrame extends JFrame implements ChangeListener {
             {
                 System.out.println("windowStateChanged()");
                 System.out.println(e);
-                if (e.getNewState() == Frame.NORMAL) {
+                if ((e.getNewState() | Frame.MAXIMIZED_BOTH) != 0) {
                     System.out.println(e.getWindow().getSize());
                 }
             }
@@ -460,7 +460,6 @@ public class MainFrame extends JFrame implements ChangeListener {
             }
             catch (ClassNotFoundException e)
             {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
@@ -480,7 +479,7 @@ public class MainFrame extends JFrame implements ChangeListener {
     {
         if (!_dataPersistenceFile.containsKey(className))
         {
-            final String tmpdir = System.getProperty("java.io.tmpdir");
+            final String homedir = System.getProperty("user.home");
             String fileName = className;
 
             try
@@ -492,16 +491,14 @@ public class MainFrame extends JFrame implements ChangeListener {
             }
             catch (NoSuchAlgorithmException e1)
             {
-                // TODO Auto-generated catch block
                 e1.printStackTrace();
             }
             catch (UnsupportedEncodingException e)
             {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
 
-            Path p = Paths.get(tmpdir, "pwgen-java", fileName + ".data");
+            Path p = Paths.get(homedir, "pwgen-java", fileName + ".data");
             try
             {
                 Files.createDirectories(p.getParent());
