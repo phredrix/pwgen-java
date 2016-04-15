@@ -15,11 +15,11 @@
  * pwgen.  If not, see http://www.gnu.org/licenses/.
  *******************************************************************************/
 
-package ui.utils;
+package d_j_phredrix.pwgen.ui.utils;
 
 import javax.swing.JCheckBox;
 
-import core.Generator.CharSetType;
+import d_j_phredrix.pwgen.core.Generator.CharSetType;
 
 public class CharSetCheckBox extends JCheckBox {
     

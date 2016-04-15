@@ -15,7 +15,7 @@
  * pwgen.  If not, see http://www.gnu.org/licenses/.
  *******************************************************************************/
 
-package ui.utils;
+package d_j_phredrix.pwgen.ui.utils;
 
 import java.awt.Component;
 import java.awt.event.FocusAdapter;

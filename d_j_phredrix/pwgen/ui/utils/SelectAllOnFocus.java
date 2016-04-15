@@ -15,41 +15,25 @@
  * pwgen.  If not, see http://www.gnu.org/licenses/.
  *******************************************************************************/
 
-package ui.utils;
+package d_j_phredrix.pwgen.ui.utils;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.Component;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 
-import ui.MainFrame;
-import core.DataModel;
-import core.Generator;
+import javax.swing.JTextField;
 
-public final class NewActionListener implements ActionListener {
-
-    public NewActionListener(MainFrame mf, DataModel data)
-    {
-        _mf = mf;
-        _data = data;
-    }
-
-    /* (non-Javadoc)
-     * @see java.awt.event.ActionListener#actionPerformed(java.awt.event.ActionEvent)
-     */
+public class SelectAllOnFocus extends FocusAdapter {
     @Override
-    public void actionPerformed(ActionEvent e)
+    public void focusGained(FocusEvent e)
     {
-        _mf.setText(getPassword());
+        if (e.getID() == FocusEvent.FOCUS_GAINED)
+        {
+            Component component = e.getComponent();
+            if (component instanceof JTextField)
+            {
+                ((JTextField) component).selectAll();
+            }
+        }
     }
-
-    private String getPassword()
-    {
-        final String characterSet = _gen.getCharacterSet(_data.getCharSet());
-        final int minLength = _data.getMinLength();
-        final int maxLength = _data.getMaxLength();
-        return _gen.createPassword(characterSet, minLength, maxLength);
-    }
-
-    private MainFrame _mf;
-    private DataModel _data;
-    private Generator _gen = new Generator();
 }

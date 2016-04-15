@@ -15,43 +15,41 @@
  * pwgen.  If not, see http://www.gnu.org/licenses/.
  *******************************************************************************/
 
-package ui.utils;
+package d_j_phredrix.pwgen.ui.utils;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-import javax.swing.JButton;
+import d_j_phredrix.pwgen.core.DataModel;
+import d_j_phredrix.pwgen.core.Generator;
+import d_j_phredrix.pwgen.ui.MainFrame;
 
-import core.DataModel;
+public final class NewActionListener implements ActionListener {
 
-/**
- * Update data model according to checkbox selections. *
- */
-public class CheckboxActionListener implements ActionListener {
-    DataModel _data;
-    private JButton _applyButton;
-
-    public CheckboxActionListener(DataModel data, JButton applyButton)
+    public NewActionListener(MainFrame mf, DataModel data)
     {
+        _mf = mf;
         _data = data;
-        _applyButton = applyButton;
     }
 
+    /* (non-Javadoc)
+     * @see java.awt.event.ActionListener#actionPerformed(java.awt.event.ActionEvent)
+     */
     @Override
     public void actionPerformed(ActionEvent e)
     {
-        if (e.getSource() instanceof CharSetCheckBox)
-        {
-            CharSetCheckBox cb = (CharSetCheckBox) e.getSource();
-            if (cb.isSelected())
-            {
-                _data.addCharSet(cb.getCharSet());
-            }
-            else
-            {
-                _data.removeCharSet(cb.getCharSet());
-            }
-            _applyButton.setEnabled(_data.getCharSet().length > 0);
-        }
+        _mf.setText(getPassword());
     }
+
+    private String getPassword()
+    {
+        final String characterSet = _gen.getCharacterSet(_data.getCharSet());
+        final int minLength = _data.getMinLength();
+        final int maxLength = _data.getMaxLength();
+        return _gen.createPassword(characterSet, minLength, maxLength);
+    }
+
+    private MainFrame _mf;
+    private DataModel _data;
+    private Generator _gen = new Generator();
 }

@@ -15,25 +15,21 @@
  * pwgen.  If not, see http://www.gnu.org/licenses/.
  *******************************************************************************/
 
-package ui.utils;
+package d_j_phredrix.pwgen.ui.utils;
 
-import java.awt.Component;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
-import javax.swing.JTextField;
-
-public class SelectAllOnFocus extends FocusAdapter {
+public class DecimalDigitsOnly extends KeyAdapter {
     @Override
-    public void focusGained(FocusEvent e)
+    public void keyTyped(KeyEvent e)
     {
-        if (e.getID() == FocusEvent.FOCUS_GAINED)
+        char c = e.getKeyChar();
+        boolean isDigit = (c >= '0' && c <= '9');
+        if (!isDigit)
         {
-            Component component = e.getComponent();
-            if (component instanceof JTextField)
-            {
-                ((JTextField) component).selectAll();
-            }
+            e.consume();
         }
     }
+
 }

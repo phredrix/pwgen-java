@@ -15,24 +15,43 @@
  * pwgen.  If not, see http://www.gnu.org/licenses/.
  *******************************************************************************/
 
-package ui.utils;
+package d_j_phredrix.pwgen.ui.utils;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.WindowEvent;
 
-import javax.swing.JFrame;
+import javax.swing.JButton;
 
-public class QuitActionListener implements ActionListener {
-    private final JFrame _mf;
+import d_j_phredrix.pwgen.core.DataModel;
 
-    public QuitActionListener(JFrame mainFrame)
+/**
+ * Update data model according to checkbox selections. *
+ */
+public class CheckboxActionListener implements ActionListener {
+    DataModel _data;
+    private JButton _applyButton;
+
+    public CheckboxActionListener(DataModel data, JButton applyButton)
     {
-        _mf = mainFrame;
+        _data = data;
+        _applyButton = applyButton;
     }
 
+    @Override
     public void actionPerformed(ActionEvent e)
     {
-        _mf.dispatchEvent(new WindowEvent(_mf, WindowEvent.WINDOW_CLOSING));
+        if (e.getSource() instanceof CharSetCheckBox)
+        {
+            CharSetCheckBox cb = (CharSetCheckBox) e.getSource();
+            if (cb.isSelected())
+            {
+                _data.addCharSet(cb.getCharSet());
+            }
+            else
+            {
+                _data.removeCharSet(cb.getCharSet());
+            }
+            _applyButton.setEnabled(_data.getCharSet().length > 0);
+        }
     }
 }

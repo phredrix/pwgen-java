@@ -15,21 +15,24 @@
  * pwgen.  If not, see http://www.gnu.org/licenses/.
  *******************************************************************************/
 
-package ui.utils;
+package d_j_phredrix.pwgen.ui.utils;
 
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
 
-public class DecimalDigitsOnly extends KeyAdapter {
-    @Override
-    public void keyTyped(KeyEvent e)
+import javax.swing.JFrame;
+
+public class QuitActionListener implements ActionListener {
+    private final JFrame _mf;
+
+    public QuitActionListener(JFrame mainFrame)
     {
-        char c = e.getKeyChar();
-        boolean isDigit = (c >= '0' && c <= '9');
-        if (!isDigit)
-        {
-            e.consume();
-        }
+        _mf = mainFrame;
     }
 
+    public void actionPerformed(ActionEvent e)
+    {
+        _mf.dispatchEvent(new WindowEvent(_mf, WindowEvent.WINDOW_CLOSING));
+    }
 }
