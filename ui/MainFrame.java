@@ -83,22 +83,25 @@ public class MainFrame extends JFrame implements ChangeListener {
 
     public static void main(String[] args)
     {
-        EventQueue.invokeLater(() -> {
-            JFrame frame = new MainFrame();
-            frame.setVisible(true);
-        });
+        EventQueue.invokeLater(MainFrame::startApplication);
+    }
+    
+    public static void startApplication() {
+        JFrame frame = new MainFrame();
+        frame.setVisible(true);
     }
 
     public MainFrame()
     {
-        try
-        {
-            _data = DataModel.loadDataModel(dataPersistenceFile());
-        }
-        catch (ClassNotFoundException | IOException e)
-        {
-            e.printStackTrace();
-        }
+//        try
+//        {
+//            _data = DataModel.loadDataModel(dataPersistenceFile());
+//        }
+//        catch (ClassNotFoundException | IOException e)
+//        {
+//            e.printStackTrace();
+//        }
+        _data = DataModel.loadFromPrefs();
 
         if (_data == null)
         {
@@ -115,7 +118,8 @@ public class MainFrame extends JFrame implements ChangeListener {
 
         initGUI();
 
-        loadUiData(uiPersistenceFile());
+        //loadUiData(uiPersistenceFile());
+        loadFromPrefs();
 
         final WindowAdapter l = new WindowAdapter() {
             @Override
@@ -381,7 +385,7 @@ public class MainFrame extends JFrame implements ChangeListener {
         }
     }
 
-    private void saveState()
+    private void saveStateToLocalFiles()
     {
         try
         {
@@ -393,7 +397,18 @@ public class MainFrame extends JFrame implements ChangeListener {
             e.printStackTrace();
         }
     }
-
+    
+    private void saveStateToPrefs()
+    {
+        _data.saveToPrefs();
+        saveToPrefs();
+    }
+    
+    private void saveState()
+    {
+        saveStateToPrefs();
+    }
+    
     private void saveUiData(String uiPersistenceFile)
     {
         int frameState = getExtendedState();
@@ -446,6 +461,16 @@ public class MainFrame extends JFrame implements ChangeListener {
                 e.printStackTrace();
             }
         }
+    }
+    
+    private void saveToPrefs()
+    {
+        // TODO
+    }
+
+    private void loadFromPrefs()
+    {
+        // TODO
     }
 
     private static String dataPersistenceFile()

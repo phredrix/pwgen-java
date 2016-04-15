@@ -84,6 +84,17 @@ public class DataModel implements Serializable {
         return result;
     }
 
+    public void saveToPrefs()
+    {
+        // TODO Auto-generated method stub        
+    }
+
+    public static DataModel loadFromPrefs()
+    {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
     public int getMinLength()
     {
         return minLength;
