@@ -24,7 +24,6 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.Frame;
 import java.awt.Point;
 import java.awt.SystemColor;
 import java.awt.Toolkit;
@@ -110,51 +109,9 @@ public class MainFrame extends JFrame implements ChangeListener {
 
         final WindowAdapter l = new WindowAdapter() {
             @Override
-            public void windowIconified(WindowEvent e)
-            {
-                System.out.println("windowIconified()");
-                System.out.println(e);
-            }
-
-            @Override
-            public void windowDeiconified(WindowEvent e)
-            {
-                System.out.println("windowDeiconified()");
-                System.out.println(e);
-                System.out.println(e.getWindow().getSize());
-            }
-
-            @Override
-            public void windowStateChanged(WindowEvent e)
-            {
-                System.out.println("windowStateChanged()");
-                System.out.println(e);
-                if ((e.getNewState() | Frame.MAXIMIZED_BOTH) != 0) {
-                    System.out.println(e.getWindow().getSize());
-                }
-            }
-
-            @Override
-            public void windowOpened(WindowEvent e)
-            {
-                System.out.println("windowOpened()");
-                System.out.println(e);
-                System.out.println(e.getWindow().getSize());
-            }
-
-            @Override
             public void windowClosing(WindowEvent e)
             {
-                System.out.println("windowClosing()");
-                System.out.println(e);
                 saveState();
-            }
-
-            @Override
-            public void windowClosed(WindowEvent e)
-            {
-                System.out.println("windowClosed()");
-                System.out.println(e);
             }
         };
         addWindowStateListener(l);
@@ -220,15 +177,15 @@ public class MainFrame extends JFrame implements ChangeListener {
     private void initGUI()
     {
         // TODO: Create a real icon for the app.
-        final String icon = "/com/sun/javafx/scene/web/skin/Undo_16x16_JFX.png";
+        final String icon = Messages.getString("MainFrame.iconResource"); //$NON-NLS-1$
         setIconImage(Toolkit.getDefaultToolkit().getImage(MainFrame.class.getResource(icon)));
-        setTitle("Password Generator");
+        setTitle(Messages.getString("MainFrame.passwordGenerator")); //$NON-NLS-1$
         final JFrame mainFrame = this;
         getContentPane().setLayout(new BorderLayout(0, 0));
 
         JPanel checkBoxPanel = new JPanel();
         checkBoxPanel.setLayout(new BoxLayout(checkBoxPanel, BoxLayout.Y_AXIS));
-        JButton btnNew = new JButton("New");
+        JButton btnNew = new JButton(Messages.getString("MainFrame.new")); //$NON-NLS-1$
         ActionListener l = new CheckboxActionListener(_data, btnNew);
 
         final CharSetType[] charSets = _data.getCharSet();
@@ -249,7 +206,7 @@ public class MainFrame extends JFrame implements ChangeListener {
 
         _checkBoxes.forEach((cb) -> {
             cb.addActionListener(l);
-            l.actionPerformed(new ActionEvent(cb, ActionEvent.ACTION_PERFORMED, ""));
+            l.actionPerformed(new ActionEvent(cb, ActionEvent.ACTION_PERFORMED, "")); //$NON-NLS-1$
             checkBoxPanel.add(cb);
         });
 
@@ -269,22 +226,22 @@ public class MainFrame extends JFrame implements ChangeListener {
         outerPanel.add(innerPanel);
         innerPanel.setLayout(new BorderLayout(0, 0));
 
-        JLabel lblMinimumLength = new JLabel("Minimum length:");
+        JLabel lblMinimumLength = new JLabel(Messages.getString("MainFrame.minimumLength")); //$NON-NLS-1$
         lblMinimumLength.setLabelFor(_minLengthTextField);
 
-        JLabel lblMaximumLength = new JLabel("Maximum length:");
+        JLabel lblMaximumLength = new JLabel(Messages.getString("MainFrame.maximumLength")); //$NON-NLS-1$
         lblMaximumLength.setLabelFor(_maxLengthTextField);
 
         final KeyListener kl = new DecimalDigitsOnly();
 
-        _maxLengthTextField.setName("Maximum length");
+        _maxLengthTextField.setName("Maximum length"); //$NON-NLS-1$
         _maxLengthTextField.setColumns(10);
         _maxLengthTextField.addKeyListener(kl);
         _maxLengthTextField.addFocusListener(new SelectAllOnFocus());
         _maxLengthTextField.addFocusListener(
                 new FocusLost(tf -> _data.setMaxLength(Integer.valueOf(tf.getText()), tf)));
 
-        _minLengthTextField.setName("Minimum length");
+        _minLengthTextField.setName("Minimum length"); //$NON-NLS-1$
         _minLengthTextField.setColumns(10);
         _minLengthTextField.addKeyListener(kl);
         _minLengthTextField.addFocusListener(new SelectAllOnFocus());
@@ -292,14 +249,14 @@ public class MainFrame extends JFrame implements ChangeListener {
                 new FocusLost(tf -> _data.setMinLength(Integer.valueOf(tf.getText()), tf)));
 
         JPanel topPanel = new JPanel();
-        topPanel.setName("Top panel");
-        topPanel.setLayout(new MigLayout("", "[77px][86px][81px][86px]", "[33px][33px][33px]"));
-        topPanel.add(lblMinimumLength, "cell 0 0,alignx left,aligny center");
-        topPanel.add(_minLengthTextField, "cell 1 0,alignx center,aligny center");
-        topPanel.add(lblMaximumLength, "cell 0 1,alignx left,aligny center");
-        topPanel.add(_maxLengthTextField, "cell 1 1,alignx center,aligny center");
+        topPanel.setName("Top panel"); //$NON-NLS-1$
+        topPanel.setLayout(new MigLayout("", "[77px][86px][81px][86px]", "[33px][33px][33px]")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        topPanel.add(lblMinimumLength, "cell 0 0,alignx left,aligny center"); //$NON-NLS-1$
+        topPanel.add(_minLengthTextField, "cell 1 0,alignx center,aligny center"); //$NON-NLS-1$
+        topPanel.add(lblMaximumLength, "cell 0 1,alignx left,aligny center"); //$NON-NLS-1$
+        topPanel.add(_maxLengthTextField, "cell 1 1,alignx center,aligny center"); //$NON-NLS-1$
 
-        topPanel.add(checkBoxPanel, "cell 0 2 4 1,alignx left,aligny center");
+        topPanel.add(checkBoxPanel, "cell 0 2 4 1,alignx left,aligny center"); //$NON-NLS-1$
         innerPanel.add(topPanel, BorderLayout.NORTH);
 
         JPanel buttonPanel = new JPanel();
@@ -311,7 +268,7 @@ public class MainFrame extends JFrame implements ChangeListener {
         btnNew.setMnemonic('n');
         btnNew.addActionListener(new NewActionListener(this, _data));
 
-        JButton btnCopy = new JButton("Copy");
+        JButton btnCopy = new JButton(Messages.getString("MainFrame.copy")); //$NON-NLS-1$
         btnCopy.setMnemonic('c');
         btnCopy.addActionListener((e) -> {
             String password = _textArea.getSelectedText();
@@ -320,30 +277,30 @@ public class MainFrame extends JFrame implements ChangeListener {
             clipboard.setContents(selec, selec);
         });
 
-        JButton btnQuit = new JButton("Quit");
+        JButton btnQuit = new JButton(Messages.getString("MainFrame.quit")); //$NON-NLS-1$
         btnQuit.setMnemonic('q');
         btnQuit.addActionListener(new QuitActionListener(mainFrame));
 
-        buttonPanel.setName("Button panel");
+        buttonPanel.setName("Button panel"); //$NON-NLS-1$
         buttonPanel.add(btnNew);
         buttonPanel.add(btnCopy);
         buttonPanel.add(btnQuit);
         
         JPanel textPanel = new JPanel();
-        textPanel.setName("Text panel");
+        textPanel.setName("Text panel"); //$NON-NLS-1$
         textPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
         innerPanel.add(textPanel, BorderLayout.CENTER);
         textPanel.setLayout(new BorderLayout(8, 8));
 
-        _textArea.setName("Text area");
+        _textArea.setName("Text area"); //$NON-NLS-1$
         _textArea.setLineWrap(true);
         _textArea.setEditable(false);
         _textArea.setBorder(new SoftBevelBorder(BevelBorder.LOWERED, null, null, null, null));
-        _textArea.setFont(new Font("Lucida Sans Typewriter", Font.PLAIN, 14));
+        _textArea.setFont(new Font("Lucida Sans Typewriter", Font.PLAIN, 14)); //$NON-NLS-1$
         _textArea.setPreferredSize(new Dimension(320, 120));
         textPanel.add(_textArea, BorderLayout.CENTER);
 
-        _messageArea.setName("Message area");
+        _messageArea.setName("Message area"); //$NON-NLS-1$
         _messageArea.setBackground(SystemColor.control);
         _messageArea.setBorder(null);
         textPanel.add(_messageArea, BorderLayout.SOUTH);
@@ -387,14 +344,14 @@ public class MainFrame extends JFrame implements ChangeListener {
     {
         Persistence p = new Persistence(getClass());
         Preferences prefs = p.prefs();
-        if (prefs.getLong("version", -1) == serialVersionUID) {
+        if (prefs.getLong(Messages.getString("MainFrame.version"), -1) == serialVersionUID) { //$NON-NLS-1$
             Dimension size = getSize();
-            size.width = prefs.getInt("width", size.width);
-            size.height = prefs.getInt("height", size.height);
+            size.width = prefs.getInt(Messages.getString("MainFrame.width"), size.width); //$NON-NLS-1$
+            size.height = prefs.getInt(Messages.getString("MainFrame.height"), size.height); //$NON-NLS-1$
             setSize(size);
             Point loc = getLocation();
-            loc.x = prefs.getInt("x", loc.x);
-            loc.y = prefs.getInt("y", loc.y);
+            loc.x = prefs.getInt(Messages.getString("MainFrame.x"), loc.x); //$NON-NLS-1$
+            loc.y = prefs.getInt(Messages.getString("MainFrame.y"), loc.y); //$NON-NLS-1$
             setLocation(loc);
         }
     }
@@ -403,13 +360,13 @@ public class MainFrame extends JFrame implements ChangeListener {
     {
         Persistence p = new Persistence(getClass());
         Preferences prefs = p.prefs();
-        prefs.putLong("version", serialVersionUID);
+        prefs.putLong(Messages.getString("MainFrame.version"), serialVersionUID); //$NON-NLS-1$
         Dimension size = getSize();
-        prefs.putInt("width", size.width);
-        prefs.putInt("height", size.height);
+        prefs.putInt(Messages.getString("MainFrame.width"), size.width); //$NON-NLS-1$
+        prefs.putInt(Messages.getString("MainFrame.height"), size.height); //$NON-NLS-1$
         Point loc = getLocation();
-        prefs.putInt("x", loc.x);
-        prefs.putInt("y", loc.y);
+        prefs.putInt(Messages.getString("MainFrame.x"), loc.x); //$NON-NLS-1$
+        prefs.putInt(Messages.getString("MainFrame.y"), loc.y); //$NON-NLS-1$
     }
 
     private DataModel _data;

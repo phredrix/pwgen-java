@@ -23,20 +23,6 @@ import java.util.Map;
 
 public class Generator {
 
-    public static void main(String[] args)
-    {
-        System.out.println("RNG algorithm is " + _rng.getAlgorithm());
-    
-        Generator gen = new Generator();
-        final String characterSet = gen.getCharacterSet(CharSetType.UPPER, CharSetType.LOWER,
-                CharSetType.DIGIT, CharSetType.PUNCTUATION);
-        for (int ii = 0; ii < 20; ++ii)
-        {
-            final String pw = gen.createPassword(characterSet, 80, 80);
-            System.out.println(pw);
-        }
-    }
-
     public enum CharSetType {
         UPPER,
         LOWER,
@@ -64,7 +50,7 @@ public class Generator {
     {
         if (characterSet.isEmpty())
         {
-            throw new IllegalArgumentException("Empty character set");
+            throw new IllegalArgumentException(Messages.getString("Generator.emptyCharacterSet")); //$NON-NLS-1$
         }
         StringBuilder result = new StringBuilder();
         int length = getRandomInt(minLength, 1 + maxLength);
@@ -110,9 +96,9 @@ public class Generator {
 
     private Map<CharSetType, String> _charSets = new HashMap<>();
     private static final SecureRandom _rng = new SecureRandom();
-    private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String LOWER = "abcdefghijklmnopqrstuvwxyz";
-    private static final String DIGIT = "0123456789";
-    private static final String PUNCTUATION = "!();:'\",.?/";
-    private static final String SPECIAL = "@#$%^&_|{}[]<>+-*=";
+    private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; //$NON-NLS-1$
+    private static final String LOWER = "abcdefghijklmnopqrstuvwxyz"; //$NON-NLS-1$
+    private static final String DIGIT = "0123456789"; //$NON-NLS-1$
+    private static final String PUNCTUATION = "!();:'\",.?/"; //$NON-NLS-1$
+    private static final String SPECIAL = "@#$%^&_|{}[]<>+-*="; //$NON-NLS-1$
 }

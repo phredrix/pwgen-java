@@ -17,17 +17,6 @@
 
 package d_j_phredrix.pwgen.core;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.ObjectStreamException;
-import java.io.OutputStream;
-import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -37,7 +26,7 @@ import java.util.prefs.Preferences;
 
 import d_j_phredrix.pwgen.core.Generator.CharSetType;
 
-public class DataModel implements Serializable {
+public class DataModel {
 
     public interface ChangeListener {
         enum Item {
@@ -58,38 +47,19 @@ public class DataModel implements Serializable {
         return new DataModel();
     }
 
-    public static DataModel loadDataModel(String fileName) throws ClassNotFoundException, IOException
-    {
-        DataModel result = null;
-        if (Files.exists(Paths.get(fileName)))
-        {
-            try (InputStream is = new FileInputStream(fileName);
-                    ObjectInputStream ois = new ObjectInputStream(is))
-            {
-                Object o = ois.readObject();
-                if (o instanceof DataModel)
-                {
-                    result = (DataModel) o;
-                }
-            }
-        }
-
-        return result;
-    }
-
     public static DataModel loadFromPrefs()
     {
         DataModel result = create();
         Persistence p = new Persistence(DataModel.class);
         Preferences prefs = p.prefs();
-        if (prefs.getLong("version", -1) == serialVersionUID)
+        if (prefs.getLong(Messages.getString("DataModel.version"), -1) == serialVersionUID) //$NON-NLS-1$
         {
-            result.minLength = prefs.getInt("minLength", 8);
-            result.maxLength = prefs.getInt("maxLength", 8);
-            String charSetList = prefs.get("charSets", "");
+            result.minLength = prefs.getInt(Messages.getString("DataModel.minLength"), 8); //$NON-NLS-1$
+            result.maxLength = prefs.getInt(Messages.getString("DataModel.maxLength"), 8); //$NON-NLS-1$
+            String charSetList = prefs.get(Messages.getString("DataModel.charSets"), ""); //$NON-NLS-1$ //$NON-NLS-2$
             if (!charSetList.isEmpty())
             {
-                String[] charSets = charSetList.split(";");
+                String[] charSets = charSetList.split(Messages.getString("DataModel.charSetSeparator")); //$NON-NLS-1$
                 for (String charSet : charSets)
                 {
                     result.charSet.add(CharSetType.valueOf(charSet));
@@ -99,29 +69,20 @@ public class DataModel implements Serializable {
         return result;
     }
 
-    public void saveDataModel(String fileName) throws IOException
-    {
-        try (OutputStream os = new FileOutputStream(fileName);
-                ObjectOutputStream oos = new ObjectOutputStream(os))
-        {
-            oos.writeObject(this);
-        }
-    }
-
     public void saveToPrefs()
     {
         Persistence p = new Persistence(DataModel.class);
         Preferences prefs = p.prefs();
-        prefs.putLong("version", serialVersionUID);
-        prefs.putInt("minLength", minLength);
-        prefs.putInt("maxLength", maxLength);
+        prefs.putLong(Messages.getString("DataModel.version"), serialVersionUID); //$NON-NLS-1$
+        prefs.putInt(Messages.getString("DataModel.minLength"), minLength); //$NON-NLS-1$
+        prefs.putInt(Messages.getString("DataModel.maxLength"), maxLength); //$NON-NLS-1$
         CharSetType[] charSets = charSet.toArray(new CharSetType[charSet.size()]);
         List<String> charSetList = new ArrayList<>();
         for (CharSetType c : charSets) {
             charSetList.add(c.toString());
         }
         String[] charSetNames = charSetList.toArray(new String[charSetList.size()]);
-        prefs.put("charSets", String.join(";", charSetNames));
+        prefs.put(Messages.getString("DataModel.charSets"), String.join(Messages.getString("DataModel.charSetSeparator"), charSetNames)); //$NON-NLS-1$ //$NON-NLS-2$
         try
         {
             prefs.flush();
@@ -267,90 +228,14 @@ public class DataModel implements Serializable {
     {
         if (value < 0)
         {
-            throw new Exception("Value must be positive");
+            throw new Exception(Messages.getString("DataModel.positiveValueRequired")); //$NON-NLS-1$
         }
-    }
-
-    /**
-     * The writeObject method is responsible for writing the state of the object
-     * for its particular class so that the corresponding readObject method can
-     * restore it. The default mechanism for saving the Object's fields can be
-     * invoked by calling out.defaultWriteObject. The method does not need to
-     * concern itself with the state belonging to its superclasses or
-     * subclasses. State is saved by writing the individual fields to the
-     * ObjectOutputStream using the writeObject method or by using the methods
-     * for primitive data types supported by DataOutput.
-     * 
-     * @param out
-     * @throws IOException
-     */
-    private void writeObject(java.io.ObjectOutputStream out)
-            throws IOException
-    {
-        out.writeInt(minLength);
-        out.writeInt(maxLength);
-        out.writeObject(charSet);
-        out.writeInt(charSet.size());
-    }
-
-    /**
-     * The readObject method is responsible for reading from the stream and
-     * restoring the classes fields. It may call in.defaultReadObject to invoke
-     * the default mechanism for restoring the object's non-static and
-     * non-transient fields. The defaultReadObject method uses information in
-     * the stream to assign the fields of the object saved in the stream with
-     * the correspondingly named fields in the current object. This handles the
-     * case when the class has evolved to add new fields. The method does not
-     * need to concern itself with the state belonging to its superclasses or
-     * subclasses. State is saved by writing the individual fields to the
-     * ObjectOutputStream using the writeObject method or by using the methods
-     * for primitive data types supported by DataOutput.
-     * 
-     * @param in
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    @SuppressWarnings("unchecked")
-    private void readObject(java.io.ObjectInputStream in)
-            throws IOException, ClassNotFoundException
-    {
-        _listeners = new ArrayList<>();
-
-        minLength = in.readInt();
-        maxLength = in.readInt();
-        final Object o = in.readObject();
-        charSet = (Set<CharSetType>) o;
-        int charSetSize = in.readInt();
-        if (charSet.size() != charSetSize)
-        {
-            throw new IOException("Incorrect collection size: charSet");
-        }
-    }
-
-    /**
-     * The readObjectNoData method is responsible for initializing the state of
-     * the object for its particular class in the event that the serialization
-     * stream does not list the given class as a superclass of the object being
-     * deserialized. This may occur in cases where the receiving party uses a
-     * different version of the deserialized instance's class than the sending
-     * party, and the receiver's version extends classes that are not extended
-     * by the sender's version. This may also occur if the serialization stream
-     * has been tampered; hence, readObjectNoData is useful for initializing
-     * deserialized objects properly despite a "hostile" or incomplete source
-     * stream.
-     * 
-     * @throws ObjectStreamException
-     */
-    @SuppressWarnings("unused")
-    private void readObjectNoData()
-            throws ObjectStreamException
-    {
     }
 
     private int minLength = 8;
     private int maxLength = 8;
     private Set<CharSetType> charSet = new TreeSet<>();
-
-    List<ChangeListener> _listeners = new ArrayList<>();
+    private List<ChangeListener> _listeners = new ArrayList<>();
+    
     private static final long serialVersionUID = -3967729926712058588L;
 }

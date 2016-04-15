@@ -17,12 +17,9 @@
 
 package d_j_phredrix.pwgen.core;
 
-import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 public class Persistence {
-
-    public static final String PWGEN = "d.j.phredrix/pwgen";
 
     public Persistence(String pathName)
     {
@@ -32,28 +29,6 @@ public class Persistence {
     public Persistence(Class<?> c)
     {
         _prefs = Preferences.userNodeForPackage(c).node(c.getSimpleName());
-    }
-
-    public static void main(String[] args)
-    {
-        Persistence p = new Persistence(Persistence.class);
-        Preferences prefs = p.prefs();
-        prefs.put("TEST", "Blah blah blah");
-        prefs.put("TEST1", "This is a test.");
-
-        try
-        {
-            System.out.println("Keys:");
-            String[] keys = prefs.keys();
-            for (String k : keys)
-            {
-                System.out.println(String.format("- %s: \"%s\"", k, prefs.get(k, null)));
-            }
-        }
-        catch (BackingStoreException e)
-        {
-            e.printStackTrace();
-        }
     }
 
     public Preferences prefs()
