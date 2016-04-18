@@ -50,6 +50,8 @@ import javax.swing.SpringLayout;
 import javax.swing.border.BevelBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.SoftBevelBorder;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 
 import net.miginfocom.swing.MigLayout;
 import d_j_phredrix.pwgen.core.DataModel;
@@ -67,26 +69,45 @@ import d_j_phredrix.pwgen.ui.utils.SelectAllOnFocus;
 
 public class MainFrame extends JFrame implements ChangeListener {
 
+    private static final class MyCaretListener implements CaretListener {
+        
+        interface Callback {
+            void selectionSizeChanged(int selectionSize);
+        }
+
+        private Callback _cb;
+        
+        public MyCaretListener(Callback cb)
+        {
+            _cb = cb;
+        }
+        
+        @Override
+        public void caretUpdate(CaretEvent e)
+        {
+            int size = getSelectionSize(e);
+            _cb.selectionSizeChanged(size);
+        }
+
+        private int getSelectionSize(CaretEvent e)
+        {
+            return Math.abs(e.getDot() - e.getMark());
+        }
+    }
+
     public static void main(String[] args)
     {
         EventQueue.invokeLater(MainFrame::startApplication);
     }
-    
-    public static void startApplication() {
+
+    public static void startApplication()
+    {
         JFrame frame = new MainFrame();
         frame.setVisible(true);
     }
 
     public MainFrame()
     {
-//        try
-//        {
-//            _data = DataModel.loadDataModel(dataPersistenceFile());
-//        }
-//        catch (ClassNotFoundException | IOException e)
-//        {
-//            e.printStackTrace();
-//        }
         _data = DataModel.loadFromPrefs();
 
         if (_data == null)
@@ -104,7 +125,6 @@ public class MainFrame extends JFrame implements ChangeListener {
 
         initGUI();
 
-        //loadUiData(uiPersistenceFile());
         loadFromPrefs();
 
         final WindowAdapter l = new WindowAdapter() {
@@ -207,8 +227,8 @@ public class MainFrame extends JFrame implements ChangeListener {
         _checkBoxes.forEach((cb) -> {
             cb.addActionListener(l);
             l.actionPerformed(new ActionEvent(cb, ActionEvent.ACTION_PERFORMED, "")); //$NON-NLS-1$
-            checkBoxPanel.add(cb);
-        });
+                checkBoxPanel.add(cb);
+            });
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -285,7 +305,7 @@ public class MainFrame extends JFrame implements ChangeListener {
         buttonPanel.add(btnNew);
         buttonPanel.add(btnCopy);
         buttonPanel.add(btnQuit);
-        
+
         JPanel textPanel = new JPanel();
         textPanel.setName("Text panel"); //$NON-NLS-1$
         textPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
@@ -299,6 +319,16 @@ public class MainFrame extends JFrame implements ChangeListener {
         _textArea.setFont(new Font("Lucida Sans Typewriter", Font.PLAIN, 14)); //$NON-NLS-1$
         _textArea.setPreferredSize(new Dimension(320, 120));
         textPanel.add(_textArea, BorderLayout.CENTER);
+
+        btnCopy.setEnabled(false);
+        CaretListener caretListener = new MyCaretListener(new MyCaretListener.Callback() {
+            @Override
+            public void selectionSizeChanged(int selectionSize)
+            {
+                btnCopy.setEnabled(selectionSize > 0);
+            }
+        });
+        _textArea.addCaretListener(caretListener);
 
         _messageArea.setName("Message area"); //$NON-NLS-1$
         _messageArea.setBackground(SystemColor.control);
@@ -334,12 +364,12 @@ public class MainFrame extends JFrame implements ChangeListener {
         _data.saveToPrefs();
         saveToPrefs();
     }
-    
+
     private void saveState()
     {
         saveStateToPrefs();
     }
-    
+
     private void loadFromPrefs()
     {
         Persistence p = new Persistence(getClass());
