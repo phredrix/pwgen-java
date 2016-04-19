@@ -24,6 +24,7 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.SystemColor;
 import java.awt.Toolkit;
@@ -34,6 +35,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -198,7 +200,10 @@ public class MainFrame extends JFrame implements ChangeListener {
     {
         // TODO: Create a real icon for the app.
         final String icon = Messages.getString("MainFrame.iconResource"); //$NON-NLS-1$
-        setIconImage(Toolkit.getDefaultToolkit().getImage(MainFrame.class.getResource(icon)));
+        final URL iconResource = MainFrame.class.getResource(icon);
+        final Toolkit toolkit = Toolkit.getDefaultToolkit();
+        final Image image = toolkit.getImage(iconResource);
+        setIconImage(image);
         setTitle(Messages.getString("MainFrame.passwordGenerator")); //$NON-NLS-1$
         final JFrame mainFrame = this;
         getContentPane().setLayout(new BorderLayout(0, 0));
